@@ -1,21 +1,40 @@
-import { useRef, useState } from "react";
+/* eslint-disable curly */
+/* eslint-disable react-hooks/exhaustive-deps */
+import { useEffect, useRef, useState } from "react";
 
 enum Operators {
-    add,
-    subtract,
-    multiply,
-    divide,
+    add = '+',
+    subtract = '-',
+    multiply = 'x',
+    divide = '÷',
 }
 
 export const useCalculator = () => {
+    const [formula, setFormula] = useState('');
     const [number, setNumber] = useState('0');
     const [prevNumber, setPrevNumber] = useState('0');
 
     const lastOperation = useRef<Operators>();
 
+    useEffect(() => {
+        if(lastOperation.current) {
+            const firstFormulaPart = formula.split(' ').at(0);
+            setFormula(`${firstFormulaPart} ${lastOperation.current} ${number}`);
+        } else {
+            setFormula(number);
+        }
+    }, [ number ]);
+
+    useEffect(() => {
+        const calculate = calculateSubResult();
+        setPrevNumber(`${calculate}`);
+    }, [formula]);
+
     const clean = () => {
         setNumber('0');
         setPrevNumber('0');
+        setFormula('0');
+        lastOperation.current = undefined;
     };
 
     const deleteOperation = () => {
@@ -33,7 +52,6 @@ export const useCalculator = () => {
     };
 
     const buildNumber = (numberString: string) => {
-        // eslint-disable-next-line curly
         if(number.includes('.') && numberString === '.') return;
         if(number.startsWith('0') || number.startsWith('-0')) {
             // Decimal point
@@ -62,6 +80,7 @@ export const useCalculator = () => {
     };
 
     const setLastNumber = () => {
+        calculateResult();
         if(number.endsWith('.')) {
             setPrevNumber(number.slice(0, -1));
         } else {
@@ -93,27 +112,34 @@ export const useCalculator = () => {
 
 
     const calculateResult = () => {
-        const num1 = Number(number);
-        const num2 = Number(prevNumber);
+        const result = calculateSubResult();
+        setFormula(`${result}`);
+        lastOperation.current = undefined;
+        setPrevNumber('0');
+    };
 
-        switch (lastOperation.current) {
-            default: throw new Error('Invalid operation');
+    const calculateSubResult = () => {
+        const [firstNumber, operation, secondNumber] = formula.split(' ');
+        const num1 = Number(firstNumber);
+        const num2 = Number(secondNumber);
+
+        if(isNaN(num2)) return num1;
+
+        switch (operation) {
             case Operators.add:
-                setNumber(`${num1 + num2}`);
-                break;
+                return num1 + num2;
             case Operators.subtract:
-                setNumber(`${num2 - num1}`);
-                break;
+                return num1 - num2;
             case Operators.multiply:
-                setNumber(`${num1 * num2}`);
-                break;
+                return num1 * num2;
             case Operators.divide:
                 if(num1 === 0) {
                     setNumber('Error');
                 } else {
-                    setNumber(`${num2 / num1}`);
+                    return num1 / num2;
                 }
                 break;
+            default: throw new Error('Invalid operation');
         }
     };
 
@@ -122,6 +148,7 @@ export const useCalculator = () => {
         // Properties
         number,
         prevNumber,
+        formula,
         // Methods
         buildNumber,
         toggleSign,
